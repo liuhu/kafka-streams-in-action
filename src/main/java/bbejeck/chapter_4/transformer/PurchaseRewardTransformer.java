@@ -33,6 +33,8 @@ public class PurchaseRewardTransformer implements ValueTransformer<Purchase, Rew
         Integer accumulatedSoFar = stateStore.get(rewardAccumulator.getCustomerId());
 
         if (accumulatedSoFar != null) {
+             // totalRewardPoints = totalRewardPoints + accumulatedSoFar
+             // 计算 totalRewardPoints
              rewardAccumulator.addRewardPoints(accumulatedSoFar);
         }
         stateStore.put(rewardAccumulator.getCustomerId(), rewardAccumulator.getTotalRewardPoints());

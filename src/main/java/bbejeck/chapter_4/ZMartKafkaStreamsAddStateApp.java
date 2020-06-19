@@ -73,6 +73,7 @@ public class ZMartKafkaStreamsAddStateApp {
         String rewardsStateStoreName = "rewardsPointsStore";
         RewardsStreamPartitioner streamPartitioner = new RewardsStreamPartitioner();
 
+        // 创建一个基于内存的 stateStore
         KeyValueBytesStoreSupplier storeSupplier = Stores.inMemoryKeyValueStore(rewardsStateStoreName);
         StoreBuilder<KeyValueStore<String, Integer>> storeBuilder = Stores.keyValueStoreBuilder(storeSupplier, Serdes.String(), Serdes.Integer());
 
@@ -81,9 +82,14 @@ public class ZMartKafkaStreamsAddStateApp {
         KStream<String, Purchase> transByCustomerStream = purchaseKStream.through( "customer_transactions", Produced.with(stringSerde, purchaseSerde, streamPartitioner));
 
 
-        KStream<String, RewardAccumulator> statefulRewardAccumulator = transByCustomerStream.transformValues(() ->  new PurchaseRewardTransformer(rewardsStateStoreName),
-                rewardsStateStoreName);
+        KStream<String, RewardAccumulator> statefulRewardAccumulator
+                // transformValues 和 mapValues 的区别是 transformValues 需要访问一个 StateStore 来完成任务
+                = transByCustomerStream.transformValues(
+                        // PurchaseRewardTransformer 编写具体的 transform 逻辑
+                        // 特点是可以访问 stateStore 中的数据
+                        () -> new PurchaseRewardTransformer(rewardsStateStoreName), rewardsStateStoreName);
 
+        //
         statefulRewardAccumulator.print(Printed.<String, RewardAccumulator>toSysOut().withLabel("rewards"));
         statefulRewardAccumulator.to("rewards", Produced.with(stringSerde, rewardAccumulatorSerde));
 
@@ -112,7 +118,7 @@ public class ZMartKafkaStreamsAddStateApp {
         props.put(StreamsConfig.CLIENT_ID_CONFIG, "AddingStateConsumer");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "AddingStateGroupId");
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "AddingStateAppId");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 1);
         props.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG, WallclockTimestampExtractor.class);
         return props;

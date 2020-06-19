@@ -412,6 +412,8 @@ public class MockDataProducer {
     }
 
     private static <T> String convertToJson(T generatedDataItem) {
-        return gson.toJson(generatedDataItem);
+        String jsonValue = gson.toJson(generatedDataItem);
+        System.out.println("---------------------------" + jsonValue);
+        return jsonValue;
     }
 }
