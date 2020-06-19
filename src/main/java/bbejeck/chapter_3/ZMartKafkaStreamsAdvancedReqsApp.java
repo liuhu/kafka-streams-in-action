@@ -79,8 +79,12 @@ public class ZMartKafkaStreamsAdvancedReqsApp {
 
            // selecting a key for storage and filtering out low dollar purchases
 
-        // TODO;
-        //  将原来的 key 转成 'purchase.getPurchaseDate().getTime()'
+        /**
+         * ⚠️
+         * @see bbejeck.chapter_4.KafkaStreamsJoinsApp 中的 KeyValueMapper 使用
+         */
+        // 生成新的 Key
+        //  将原来的 key 'null' 转成 'purchase.getPurchaseDate().getTime()'
         KeyValueMapper<String, Purchase, Long> purchaseDateAsKey =
                 (key, purchase) -> purchase.getPurchaseDate().getTime();
 
@@ -93,8 +97,12 @@ public class ZMartKafkaStreamsAdvancedReqsApp {
         filteredKStream.to("purchases", Produced.with(Serdes.Long(), purchaseSerde));
 
 
+        /**
+         * 分裂流
+         * KStream.branch(Predicate ...), 根据 Predicate 实例进行对流对分裂
+         */
 
-         // branching stream for separating out purchases in new departments to their own topics
+        // branching stream for separating out purchases in new departments to their own topics
 
         Predicate<String, Purchase> isCoffee = (key, purchase) -> purchase.getDepartment().equalsIgnoreCase("coffee");
         Predicate<String, Purchase> isElectronics = (key, purchase) -> purchase.getDepartment().equalsIgnoreCase("electronics");
@@ -104,15 +112,16 @@ public class ZMartKafkaStreamsAdvancedReqsApp {
 
         KStream<String, Purchase>[] kstreamByDept = purchaseKStream.branch(isCoffee, isElectronics);
 
+        // 分裂出 coffee 处理器
         kstreamByDept[coffee].to( "coffee", Produced.with(stringSerde, purchaseSerde));
         kstreamByDept[coffee].print(Printed.<String, Purchase>toSysOut().withLabel( "coffee"));
 
+        // 分裂出 electronics 处理器
         kstreamByDept[electronics].to("electronics", Produced.with(stringSerde, purchaseSerde));
         kstreamByDept[electronics].print(Printed.<String, Purchase>toSysOut().withLabel("electronics"));
 
 
-
-
+        // 创建 ForeachAction， 将流数据调用 Action 处理，这里模拟存入 DB
          // security Requirements to record transactions for certain employee
         ForeachAction<String, Purchase> purchaseForeachAction = (key, purchase) ->
                 SecurityDBService.saveRecord(purchase.getPurchaseDate(), purchase.getEmployeeId(), purchase.getItemPurchased());
