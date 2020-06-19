@@ -58,16 +58,18 @@ public class ZMartKafkaStreamsAdvancedReqsApp {
         StreamsBuilder builder = new StreamsBuilder();
 
 
-        // previous requirements
-        KStream<String,Purchase> purchaseKStream = builder.stream( "transactions", Consumed.with(stringSerde, purchaseSerde))
+        // 清洗数据
+        KStream<String,Purchase> purchaseKStream = builder.stream( "transactions",
+                Consumed.with(stringSerde, purchaseSerde))
                 .mapValues(p -> Purchase.builder(p).maskCreditCard().build());
-
-        KStream<String, PurchasePattern> patternKStream = purchaseKStream.mapValues(purchase -> PurchasePattern.builder(purchase).build());
+        // 模式 - 格式化数据
+        KStream<String, PurchasePattern> patternKStream = purchaseKStream
+                        .mapValues(purchase -> PurchasePattern.builder(purchase).build());
 
         patternKStream.print( Printed.<String, PurchasePattern>toSysOut().withLabel("patterns"));
         patternKStream.to("patterns", Produced.with(stringSerde,purchasePatternSerde));
 
-
+        // 奖励 - 格式化数据
         KStream<String, RewardAccumulator> rewardsKStream = purchaseKStream.mapValues(purchase -> RewardAccumulator.builder(purchase).build());
 
         rewardsKStream.print(Printed.<String, RewardAccumulator>toSysOut().withLabel("rewards"));
@@ -77,13 +79,18 @@ public class ZMartKafkaStreamsAdvancedReqsApp {
 
            // selecting a key for storage and filtering out low dollar purchases
 
+        // TODO;
+        //  将原来的 key 转成 'purchase.getPurchaseDate().getTime()'
+        KeyValueMapper<String, Purchase, Long> purchaseDateAsKey =
+                (key, purchase) -> purchase.getPurchaseDate().getTime();
 
-        KeyValueMapper<String, Purchase, Long> purchaseDateAsKey = (key, purchase) -> purchase.getPurchaseDate().getTime();
-
-        KStream<Long, Purchase> filteredKStream = purchaseKStream.filter((key, purchase) -> purchase.getPrice() > 5.00).selectKey(purchaseDateAsKey);
+        // 过滤
+        KStream<Long, Purchase> filteredKStream = purchaseKStream
+                .filter((key, purchase) -> purchase.getPrice() > 5.00)
+                .selectKey(purchaseDateAsKey);
 
         filteredKStream.print(Printed.<Long, Purchase>toSysOut().withLabel("purchases"));
-        filteredKStream.to("purchases", Produced.with(Serdes.Long(),purchaseSerde));
+        filteredKStream.to("purchases", Produced.with(Serdes.Long(), purchaseSerde));
 
 
 
@@ -134,7 +141,7 @@ public class ZMartKafkaStreamsAdvancedReqsApp {
         props.put(StreamsConfig.CLIENT_ID_CONFIG, "Example-Kafka-Streams-Job");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "streams-purchases");
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "testing-streams-api");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG,"latest");
         props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 1);
         props.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG, WallclockTimestampExtractor.class);

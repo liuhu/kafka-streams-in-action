@@ -385,7 +385,7 @@ public class MockDataProducer {
         if (producer == null) {
             LOG.info("Initializing the producer");
             Properties properties = new Properties();
-            properties.put("bootstrap.servers", "localhost:9092");
+            properties.put("bootstrap.servers", "172.16.1.119:9092");
             properties.put("key.serializer", "org.apache.kafka.common.serialization.StringSerializer");
             properties.put("value.serializer", "org.apache.kafka.common.serialization.StringSerializer");
             properties.put("acks", "1");

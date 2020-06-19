@@ -54,22 +54,32 @@ public class ZMartKafkaStreamsApp {
 
         StreamsBuilder streamsBuilder = new StreamsBuilder();
 
-        KStream<String,Purchase> purchaseKStream = streamsBuilder.stream("transactions", Consumed.with(stringSerde, purchaseSerde))
+        KStream<String,Purchase> purchaseKStream = streamsBuilder
+                // 从指定的 Topic 创建 KStream
+                // Consumed 定义了 key 和 value 的序列化反、序列化
+                .stream("transactions", Consumed.with(stringSerde, purchaseSerde))
+                // 将 原始value：Purchase 中的 信用卡信息隐藏
                 .mapValues(p -> Purchase.builder(p).maskCreditCard().build());
-        
-        KStream<String, PurchasePattern> patternKStream = purchaseKStream.mapValues(purchase -> PurchasePattern.builder(purchase).build());
 
+        KStream<String, PurchasePattern> patternKStream = purchaseKStream
+                // 转换 value，计算出总价格
+                .mapValues(purchase -> PurchasePattern.builder(purchase).build());
+
+        // 控制台输出
         patternKStream.print(Printed.<String, PurchasePattern>toSysOut().withLabel("patterns"));
+        // 将结果输出到 "patterns" topic 中
         patternKStream.to("patterns", Produced.with(stringSerde,purchasePatternSerde));
 
         
-        KStream<String, RewardAccumulator> rewardsKStream = purchaseKStream.mapValues(purchase -> RewardAccumulator.builder(purchase).build());
+        KStream<String, RewardAccumulator> rewardsKStream =
+                // 计算奖励
+                purchaseKStream.mapValues(purchase -> RewardAccumulator.builder(purchase).build());
 
         rewardsKStream.print(Printed.<String, RewardAccumulator>toSysOut().withLabel("rewards"));
+        // 将奖励信息输出 到"rewards" 中
         rewardsKStream.to("rewards", Produced.with(stringSerde,rewardAccumulatorSerde));
 
-
-
+        // 购买
         purchaseKStream.print(Printed.<String, Purchase>toSysOut().withLabel("purchases"));
         purchaseKStream.to("purchases", Produced.with(stringSerde,purchaseSerde));
 
@@ -94,7 +104,7 @@ public class ZMartKafkaStreamsApp {
         props.put(StreamsConfig.CLIENT_ID_CONFIG, "FirstZmart-Kafka-Streams-Client");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "zmart-purchases");
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "FirstZmart-Kafka-Streams-App");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 1);
         props.put(StreamsConfig.DEFAULT_TIMESTAMP_EXTRACTOR_CLASS_CONFIG, WallclockTimestampExtractor.class);
         return props;
