@@ -37,6 +37,15 @@ public class AggregationsAndReducingExample {
 
     private static Logger LOG = LoggerFactory.getLogger(AggregationsAndReducingExample.class);
 
+    /**
+     * 5.2 - 定时定量
+     * 设置缓冲大小 cache.max.bytes.buffering
+     * 提交时间间隔和 commit.interval.ms
+     *
+     * 5.3 聚合
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
 
 
@@ -59,7 +68,7 @@ public class AggregationsAndReducingExample {
                 ShareVolume stockVolume = iterator.next();
                 if (stockVolume != null) {
                     builder.append(counter++).append(")").append(stockVolume.getSymbol())
-                            .append(":").append(numberFormat.format(stockVolume.getShares())).append(" ");
+                            .append(":").append(numberFormat.format(stockVolume.getShares())).append("    ");
                 }
             }
             return builder.toString();
@@ -70,16 +79,22 @@ public class AggregationsAndReducingExample {
         KTable<String, ShareVolume> shareVolume = builder.stream(STOCK_TRANSACTIONS_TOPIC,
                 Consumed.with(stringSerde, stockTransactionSerde)
                         .withOffsetResetPolicy(EARLIEST))
+                // value 映射
                 .mapValues(st -> ShareVolume.newBuilder(st).build())
+                // 根据 Symbol（股票代码）分组
                 .groupBy((k, v) -> v.getSymbol(), Serialized.with(stringSerde, shareVolumeSerde))
-                .reduce(ShareVolume::sum);
+                .reduce(ShareVolume::sum); // 聚合交易总成交量
 
-
-        shareVolume.groupBy((k, v) -> KeyValue.pair(v.getIndustry(), v), Serialized.with(stringSerde, shareVolumeSerde))
+        // 对表进行统计， 获取总成交量 Top5 的公司
+        // Top5 的实现 PriorityQueue 容量为5
+        shareVolume
+                // 根据产业类型分组
+                .groupBy((k, v) -> KeyValue.pair(v.getIndustry(), v), Serialized.with(stringSerde, shareVolumeSerde))
+                // 聚合
                 .aggregate(() -> fixedQueue,
-                        (k, v, agg) -> agg.add(v),
-                        (k, v, agg) -> agg.remove(v),
-                        Materialized.with(stringSerde, fixedSizePriorityQueueSerde))
+                        (k, v, agg) -> agg.add(v),     // 聚合成交量
+                        (k, v, agg) -> agg.remove(v),  // 删除旧的更新 ？？？？
+                        Materialized.with(stringSerde, fixedSizePriorityQueueSerde)) // 序列化器
                 .mapValues(valueMapper)
                 .toStream().peek((k, v) -> LOG.info("Stock volume by industry {} {}", k, v))
                 .to("stock-volume-by-company", Produced.with(stringSerde, stringSerde));
@@ -105,7 +120,7 @@ public class AggregationsAndReducingExample {
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "30000");
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "10000");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "1");
         props.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "10000");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());

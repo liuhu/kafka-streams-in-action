@@ -25,17 +25,27 @@ public class KStreamVsKTableExample {
 
     private static final Logger LOG = LoggerFactory.getLogger(KStreamVsKTableExample.class);
 
+    /**
+     * P114 5.1 流表直接的关系
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
 
         StreamsConfig streamsConfig = new StreamsConfig(getProperties());
 
         StreamsBuilder builder = new StreamsBuilder();
 
-
+        // 创建 KTable
         KTable<String, StockTickerData> stockTickerTable = builder.table(STOCK_TICKER_TABLE_TOPIC);
+
+        // 创建 KStream
         KStream<String, StockTickerData> stockTickerStream = builder.stream(STOCK_TICKER_STREAM_TOPIC);
 
+        // 打印表
         stockTickerTable.toStream().print(Printed.<String, StockTickerData>toSysOut().withLabel("Stocks-KTable"));
+
+        // 打印流
         stockTickerStream.print(Printed.<String, StockTickerData>toSysOut().withLabel( "Stocks-KStream"));
 
         int numberCompanies = 3;
@@ -63,7 +73,7 @@ public class KStreamVsKTableExample {
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "30000");
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "15000");
         //props.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG,"0");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "1");
         props.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "10000");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
