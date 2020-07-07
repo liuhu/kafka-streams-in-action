@@ -30,7 +30,7 @@ public class KStreamPrinter implements ProcessorSupplier {
 
         @Override
         public void process(Object key, Object value) {
-            System.out.println(String.format("[%s] Key [%s] Value[%s]", name, key, value));
+            System.out.println(String.format("[%s] AAA-Key [%s] AAA-Value[%s]", name, key, value));
             this.context().forward(key, value);
         }
     }

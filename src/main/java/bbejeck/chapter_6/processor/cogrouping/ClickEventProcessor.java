@@ -27,6 +27,7 @@ public class ClickEventProcessor extends AbstractProcessor<String, ClickEvent> {
     @Override
     public void process(String key, ClickEvent clickEvent) {
         if (key != null) {
+            // clickEvent.setLink("111111");
             Tuple<ClickEvent, StockTransaction> tuple = Tuple.of(clickEvent, null);
             context().forward(key, tuple);
         }

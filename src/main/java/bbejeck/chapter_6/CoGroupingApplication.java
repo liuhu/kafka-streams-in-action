@@ -49,16 +49,17 @@ public class CoGroupingApplication {
 
 
         Topology topology = new Topology();
+        // 配置日志主题
         Map<String, String> changeLogConfigs = new HashMap<>();
-        changeLogConfigs.put("retention.ms", "120000");
-        changeLogConfigs.put("cleanup.policy", "compact,delete");
+        changeLogConfigs.put("retention.ms", "120000"); // 缓存  120s
+        changeLogConfigs.put("cleanup.policy", "compact,delete"); // 压缩、删除
 
-
+        // 新建 Stores
         KeyValueBytesStoreSupplier storeSupplier = Stores.persistentKeyValueStore(TUPLE_STORE_NAME);
         StoreBuilder<KeyValueStore<String, Tuple<List<ClickEvent>, List<StockTransaction>>>> storeBuilder =
                 Stores.keyValueStoreBuilder(storeSupplier,
                         Serdes.String(),
-                        eventPerformanceTuple).withLoggingEnabled(changeLogConfigs);
+                        eventPerformanceTuple).withLoggingEnabled(changeLogConfigs); // 开启日志，为了失败恢复，容错要求
 
         topology.addSource("Txn-Source", stringDeserializer, stockTransactionDeserializer, "stock-transactions")
                 .addSource("Events-Source", stringDeserializer, clickEventDeserializer, "events")
@@ -89,7 +90,7 @@ public class CoGroupingApplication {
         props.put(StreamsConfig.CLIENT_ID_CONFIG, "cogrouping-client");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "cogrouping-group");
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "cogrouping-appid");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 1);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());

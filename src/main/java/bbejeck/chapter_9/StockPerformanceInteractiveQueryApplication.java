@@ -147,7 +147,7 @@ public class StockPerformanceInteractiveQueryApplication {
         props.put(StreamsConfig.CLIENT_ID_CONFIG, "ks-interactive-stock-analysis-client");
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "ks-interactive-stock-analysis-group");
         props.put(StreamsConfig.APPLICATION_ID_CONFIG, "ks-interactive-stock-analysis-appid");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(StreamsConfig.REPLICATION_FACTOR_CONFIG, 1);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(StreamsConfig.topicPrefix("retention.bytes"), 1024 * 1024);

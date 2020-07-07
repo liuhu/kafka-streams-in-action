@@ -48,6 +48,14 @@ public class KafkaStreamsJoinsApp {
 
     private static final Logger LOG = LoggerFactory.getLogger(KafkaStreamsJoinsApp.class);
 
+    /**
+     * P94 连接流
+     * 流A、流B 通过相同的键，连接流，获得更加丰富的流信息
+     * @see ValueJoiner - 新值生成
+     * @see JoinWindows - 流 join 时间窗口
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
 
         StreamsConfig streamsConfig = new StreamsConfig(getProperties());
@@ -87,8 +95,8 @@ public class KafkaStreamsJoinsApp {
         KStream<String, Purchase> electronicsStream = branchesStream[ELECTRONICS_PURCHASE];
 
         // 用于连接 value， 所以这里定义的是将两个 value 生成 新的 value
-        ValueJoiner<Purchase, Purchase, CorrelatedPurchase> purchaseJoiner
-                = new PurchaseJoiner(); // 这里 value 合并的实现
+        ValueJoiner <Purchase, Purchase, CorrelatedPurchase> purchaseJoiner
+                = new PurchaseJoiner(); // 这里 value 合并的实现, 通过 customerId 合并
 
         // JoinWindows.of -- 连接的两个值之间最大时间差为 20 min
         // JoinWindows.before(5000) -- 被 join 的 StreamB 时间戳最多比 StreamA 时间滞后5秒
@@ -109,7 +117,7 @@ public class KafkaStreamsJoinsApp {
         joinedKStream.print(Printed.<String, CorrelatedPurchase>toSysOut().withLabel("joined KStream"));
 
         // used only to produce data for this application, not typical usage
-        MockDataProducer.producePurchaseData();
+        MockDataProducer.producePurchaseData(1,1,1);
         
         LOG.info("Starting Join Examples");
         KafkaStreams kafkaStreams = new KafkaStreams(builder.build(), streamsConfig);

@@ -33,6 +33,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Printed;
 import org.apache.kafka.streams.kstream.Produced;
+import org.apache.kafka.streams.kstream.ValueTransformerSupplier;
 import org.apache.kafka.streams.processor.WallclockTimestampExtractor;
 import org.apache.kafka.streams.state.KeyValueBytesStoreSupplier;
 import org.apache.kafka.streams.state.KeyValueStore;
@@ -48,6 +49,12 @@ public class ZMartKafkaStreamsAddStateApp {
 
     private static final Logger LOG = LoggerFactory.getLogger(ZMartKafkaStreamsAddStateApp.class);
 
+    /**
+     * p90 StateStore 的使用，记录之前处理的数据
+     * @see KStream#transformValues(ValueTransformerSupplier, String...)  可以访问 stateStore 中的数据
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
         
         StreamsConfig streamsConfig = new StreamsConfig(getProperties());
@@ -59,7 +66,7 @@ public class ZMartKafkaStreamsAddStateApp {
 
         StreamsBuilder builder = new StreamsBuilder();
 
-        KStream<String,Purchase> purchaseKStream = builder.stream( "transactions", Consumed.with(stringSerde, purchaseSerde))
+        KStream<String,Purchase> purchaseKStream = builder.stream( "transactions-1", Consumed.with(stringSerde, purchaseSerde))
                 .mapValues(p -> Purchase.builder(p).maskCreditCard().build());
 
         KStream<String, PurchasePattern> patternKStream = purchaseKStream.mapValues(purchase -> PurchasePattern.builder(purchase).build());
@@ -89,7 +96,6 @@ public class ZMartKafkaStreamsAddStateApp {
                         // 特点是可以访问 stateStore 中的数据
                         () -> new PurchaseRewardTransformer(rewardsStateStoreName), rewardsStateStoreName);
 
-        //
         statefulRewardAccumulator.print(Printed.<String, RewardAccumulator>toSysOut().withLabel("rewards"));
         statefulRewardAccumulator.to("rewards", Produced.with(stringSerde, rewardAccumulatorSerde));
 

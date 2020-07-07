@@ -42,7 +42,7 @@ public class MockDataProducer {
     private static final Gson gson = new GsonBuilder().disableHtmlEscaping().create();
     private static ExecutorService executorService = Executors.newFixedThreadPool(1);
     private static Callback callback;
-    private static final String TRANSACTIONS_TOPIC = "transactions";
+    private static final String TRANSACTIONS_TOPIC = "transactions-1";
     public static final String STOCK_TRANSACTIONS_TOPIC = "stock-transactions";
     public static final String STOCK_TICKER_TABLE_TOPIC = "stock-ticker-table";
     public static final String STOCK_TICKER_STREAM_TOPIC = "stock-ticker-stream";
@@ -413,7 +413,7 @@ public class MockDataProducer {
 
     private static <T> String convertToJson(T generatedDataItem) {
         String jsonValue = gson.toJson(generatedDataItem);
-        System.out.println("---------------------------" + jsonValue);
+        // System.out.println("---------------------------" + jsonValue);
         return jsonValue;
     }
 }

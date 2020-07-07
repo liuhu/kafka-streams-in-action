@@ -15,6 +15,10 @@ public class ClickEvent {
         this.timestamp = timestamp;
     }
 
+    public void setLink(String link) {
+        this.link = link;
+    }
+
     public String getSymbol() {
         return symbol;
     }
