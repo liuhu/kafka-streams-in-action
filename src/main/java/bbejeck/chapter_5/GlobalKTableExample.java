@@ -38,6 +38,11 @@ public class GlobalKTableExample {
 
     private static Logger LOG = LoggerFactory.getLogger(GlobalKTableExample.class);
 
+    /**
+     *
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
 
 
@@ -68,8 +73,8 @@ public class GlobalKTableExample {
         GlobalKTable<String, String> clients = builder.globalTable(CLIENTS.topicName());
 
 
-        countStream.leftJoin(publicCompanies, (key, txn) -> txn.getStockTicker(),TransactionSummary::withCompanyName)
-                .leftJoin(clients, (key, txn) -> txn.getCustomerId(), TransactionSummary::withCustomerName)
+        countStream.leftJoin(publicCompanies, (key, txn) -> txn.getStockTicker(), (v1, v2) -> v1.withCompanyName(v2))
+                .leftJoin(clients, (key, txn) -> txn.getCustomerId(), (v1, v2) -> v1.withCustomerName(v2))
                 .print(Printed.<String, TransactionSummary>toSysOut().withLabel("Resolved Transaction Summaries"));
 
 
@@ -106,7 +111,7 @@ public class GlobalKTableExample {
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "30000");
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "10000");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "1");
         props.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "10000");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());

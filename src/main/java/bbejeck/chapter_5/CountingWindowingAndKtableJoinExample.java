@@ -39,6 +39,12 @@ public class CountingWindowingAndKtableJoinExample {
 
     private static final Logger LOG = LoggerFactory.getLogger(CountingWindowingAndKtableJoinExample.class);
 
+    /**
+     * p124, 章节5.4 使用窗口跟踪交易
+     *
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
 
 
@@ -52,40 +58,51 @@ public class CountingWindowingAndKtableJoinExample {
         long twentySeconds = 1000 * 20;
         long fifteenMinutes = 1000 * 60 * 15;
         long fiveSeconds = 1000 * 5;
+
+
         KTable<Windowed<TransactionSummary>, Long> customerTransactionCounts =
+                // 创建交易记录流
                  builder.stream(STOCK_TRANSACTIONS_TOPIC, Consumed.with(stringSerde, transactionSerde).withOffsetResetPolicy(LATEST))
-                .groupBy((noKey, transaction) -> TransactionSummary.from(transaction),
-                        Serialized.with(transactionKeySerde, transactionSerde))
-                 // session window comment line below and uncomment another line below for a different window example
-                .windowedBy(SessionWindows.with(twentySeconds).until(fifteenMinutes)).count();
+                         // value: StockTransaction
+                         .groupBy((noKey, transaction) -> TransactionSummary.from(transaction), Serialized.with(transactionKeySerde, transactionSerde))
+                         // session window comment line below and uncomment another line below for a different window example
+                         .windowedBy(SessionWindows.with(twentySeconds).until(fifteenMinutes)).count();
+                         // 跳跃窗口
+                         //.windowedBy(TimeWindows.of(twentySeconds).until(fifteenMinutes)).count();
+                         //.windowedBy(TimeWindows.of(twentySeconds)).count();
+                         // 滑动窗口
+                         //.windowedBy(TimeWindows.of(twentySeconds).advanceBy(fiveSeconds).until(fifteenMinutes)).count();
 
-                //The following are examples of different windows examples
+        // 表转流，这里仅仅是打印表中数据
+        customerTransactionCounts.toStream()
+                .print(Printed.<Windowed<TransactionSummary>, Long>toSysOut().withLabel("Customer Transactions Counts"));
 
-                //Tumbling window with timeout 15 minutes
-                //.windowedBy(TimeWindows.of(twentySeconds).until(fifteenMinutes)).count();
-
-                //Tumbling window with default timeout 24 hours
-                //.windowedBy(TimeWindows.of(twentySeconds)).count();
-
-                //Hopping window 
-                //.windowedBy(TimeWindows.of(twentySeconds).advanceBy(fiveSeconds).until(fifteenMinutes)).count();
-
-        customerTransactionCounts.toStream().print(Printed.<Windowed<TransactionSummary>, Long>toSysOut().withLabel("Customer Transactions Counts"));
-
-        KStream<String, TransactionSummary> countStream = customerTransactionCounts.toStream().map((window, count) -> {
+        // 每20秒
+        KStream<String, TransactionSummary> countStream =
+                customerTransactionCounts.toStream().map((window, count) -> {
                       TransactionSummary transactionSummary = window.key();
                       String newKey = transactionSummary.getIndustry();
                       transactionSummary.setSummaryCount(count);
                       return KeyValue.pair(newKey, transactionSummary);
         });
 
+        // 打印窗口数据
+        countStream.print(Printed.<String, TransactionSummary>toSysOut().withLabel("Windows Transactions Summary"));
+
+        // 创建 KTable, 程序启动时， 会发消息到 financial-news
         KTable<String, String> financialNews = builder.table( "financial-news", Consumed.with(EARLIEST));
 
-
+        // 值映射 (v1, v2) -> result
         ValueJoiner<TransactionSummary, String, String> valueJoiner = (txnct, news) ->
                 String.format("%d shares purchased %s related news [%s]", txnct.getSummaryCount(), txnct.getStockTicker(), news);
 
-        KStream<String,String> joined = countStream.leftJoin(financialNews, valueJoiner, Joined.with(stringSerde, transactionKeySerde, stringSerde));
+        // 流 join 表
+        KStream<String,String> joined = countStream
+                .leftJoin(
+                        financialNews,
+                        valueJoiner,
+                        // Joined 定义序列化配置，原key，原 value，新 value
+                        Joined.with(stringSerde, transactionKeySerde, stringSerde));
 
         joined.print(Printed.<String, String>toSysOut().withLabel("Transactions and News"));
 
@@ -121,7 +138,7 @@ public class CountingWindowingAndKtableJoinExample {
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "30000");
         props.put(StreamsConfig.COMMIT_INTERVAL_MS_CONFIG, "10000");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "172.16.1.119:9092");
         props.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, "1");
         props.put(ConsumerConfig.METADATA_MAX_AGE_CONFIG, "10000");
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass().getName());
