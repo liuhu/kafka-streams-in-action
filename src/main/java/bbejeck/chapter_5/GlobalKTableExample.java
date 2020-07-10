@@ -39,7 +39,7 @@ public class GlobalKTableExample {
     private static Logger LOG = LoggerFactory.getLogger(GlobalKTableExample.class);
 
     /**
-     *
+     * 全局表
      * @param args
      * @throws Exception
      */
@@ -69,11 +69,15 @@ public class GlobalKTableExample {
                         .windowedBy(SessionWindows.with(twentySeconds)).count()
                         .toStream().map(transactionMapper);
 
+        // 全局表，启动时候会发消息到 topic 初始化
         GlobalKTable<String, String> publicCompanies = builder.globalTable(COMPANIES.topicName());
         GlobalKTable<String, String> clients = builder.globalTable(CLIENTS.topicName());
 
-
-        countStream.leftJoin(publicCompanies, (key, txn) -> txn.getStockTicker(), (v1, v2) -> v1.withCompanyName(v2))
+        // 流 join 表
+        countStream
+                // 添加 CompanyName
+                .leftJoin(publicCompanies, (key, txn) -> txn.getStockTicker(), (v1, v2) -> v1.withCompanyName(v2))
+                // 添加 CustomerName
                 .leftJoin(clients, (key, txn) -> txn.getCustomerId(), (v1, v2) -> v1.withCustomerName(v2))
                 .print(Printed.<String, TransactionSummary>toSysOut().withLabel("Resolved Transaction Summaries"));
 
