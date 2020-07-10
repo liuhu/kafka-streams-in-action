@@ -32,7 +32,10 @@ public class BeerPurchaseProcessor extends AbstractProcessor<String, BeerPurchas
             builder.currency(DOLLARS);
             builder.totalSale(Double.parseDouble(decimalFormat.format(transactionCurrency.convertToDollars(internationalSaleAmount))));
             dollarBeerPurchase = builder.build();
-            context().forward(key, dollarBeerPurchase, internationalSalesNode);
+            context().forward(
+                    key, // key
+                    dollarBeerPurchase,  // value
+                    internationalSalesNode); // 字节点名称
         } else {
             context().forward(key, beerPurchase, domesticSalesNode);
         }
