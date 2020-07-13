@@ -26,6 +26,12 @@ import static org.apache.kafka.streams.Topology.AutoOffsetReset.LATEST;
 public class PopsHopsApplication {
 
 
+    /**
+     * p136 6.2
+     * Kafka 拓扑创建 源、处理器、接收器
+     * @param args
+     * @throws Exception
+     */
     public static void main(String[] args) throws Exception {
 
         StreamsConfig streamsConfig = new StreamsConfig(getProperties());
